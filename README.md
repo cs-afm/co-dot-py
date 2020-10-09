@@ -7,11 +7,13 @@ git clone https://github.com/cs-afm/co-dot-py
 
 ## Usage
 
-co.py -s SRC -d DST [-x]
+#### [python/python3] co.py -s SRC -d DST [-x]
 
--s    path/to/sourceFile
--d    path/to/destinationFile. Careful, it'll overwrite existing files!
--x    optional: switch for xxHash instead of md5
+option | value
+------------ | -------------
+-s| required: path/to/sourceFile
+-d | required: path/to/destinationFile. Careful, it'll overwrite existing files!
+-x | optional: switch for xxHash instead of md5
 
 ## Dependencies
 
