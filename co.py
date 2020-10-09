@@ -1,16 +1,14 @@
 import hashlib
 import os
-import sys
 import argparse
-import xxhash # (this library can be installed with "pip install xxhash"/"pip3 install xxhash")
 from datetime import datetime
+import xxhash
 
-src_path, dst_path = sys.argv[1:3]
 parser = argparse.ArgumentParser(
     prog='co-dot-py',
-    description='multiplatform as-fast-as-we-can file transfer script'
+    description='A little cli tool for moving things around'
     )
-parser.version = '0.0.1'
+parser.version = '0.0.2'
 
 parser.add_argument(
     '-s',
@@ -32,10 +30,12 @@ parser.add_argument(
 
 
 def copy_file(src_path, dst_path, x=False):
-    with open(src_path, 'rb') as src, open(dst_path, 'wb+') as dst: # Here we need to open the destination file in 'wb+' mode to be able to read it as well
+    with open(src_path, 'rb') as src, open(dst_path, 'wb+') as dst:
         before = datetime.now()
 
-        filesize = os.path.getsize(src_path)
+        src_stats = os.stat(src_path)
+        src_time = (src_stats.st_atime, src_stats.st_mtime)
+        filesize = src_stats.st_size#os.path.getsize(src_path)
         done = 0
         progress_print = '0'
 
@@ -45,7 +45,7 @@ def copy_file(src_path, dst_path, x=False):
 
         while True:
             chunk_src = src.read(4096)
-            chunk_size = len(chunk_src) # This can be less than 4 KiB, at the end of the file, right?
+            chunk_size = len(chunk_src)
             if chunk_src == b'':
                 break
 
@@ -53,15 +53,17 @@ def copy_file(src_path, dst_path, x=False):
             h_src.update(chunk_src)
             dst.write(chunk_src)
 
-            # Read destination here already, instead of an extra loop:
-            dst.seek(-chunk_size, 1) # We need to move the file handle back to the position where it was before writing the last chunk of dst
+            # Read destination and update its hash:
+            dst.seek(-chunk_size, 1)
             chunk_dst = dst.read(chunk_size)
             h_dst.update(chunk_dst)
 
-            # Comparing each chunk on its own - as plain bytes,
-            # and bail out on any error:
+            # # Comparing each chunk on its own - as plain bytes,
+            # # and bail out on any error:
             # if ( chunk_src != chunk_dst ):
             #     raise Exception('chunk mismatch')
+            # # From the first tests this approach didn't seem to be much faster
+            # # than xxHash.
 
             done += chunk_size
             progress = int((done/filesize) * 100)
@@ -69,7 +71,7 @@ def copy_file(src_path, dst_path, x=False):
                 progress_print = progress
                 print('Copying: ' + str(progress_print)+ '%',end="\r",flush=True)
 
-        # The hashcodes ready here could be stored to or read from a file for (later) comparison.
+        # TODO: store hashcode to file
         hash_src = h_src.hexdigest()
         hash_dst = h_dst.hexdigest()
 
@@ -77,7 +79,10 @@ def copy_file(src_path, dst_path, x=False):
             print('src: ' + hash_src)
             print('dst: ' + hash_dst)
             raise Exception('hash mismatch')
-        
+
+        # Copy atime and mtime from src to dst
+        os.utime(dst_path, src_time)
+
         print('Copying: done!')
         print(f'source hash ({hash_type}): {hash_src}')
         print(f'destination hash ({hash_type}): {hash_dst}')

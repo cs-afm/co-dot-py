@@ -22,4 +22,4 @@ option | value
 
 ## TODO
 
-* Preserve mtime of src
+* Store hashcodes to file
