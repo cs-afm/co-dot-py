@@ -39,9 +39,14 @@ def copy_file(src_path, dst_path, x=False):
         done = 0
         progress_print = '0'
 
-        hash_func, hash_type = [xxhash.xxh64(), 'xxHash'] if x else [hashlib.md5(), 'md5']
-        h_src = hash_func
-        h_dst = hash_func
+        if x:
+            hash_type = 'xxHash'
+            h_src = xxhash.xxh64()
+            h_dst = xxhash.xxh64()
+        else:
+            hash_type = 'md5'
+            h_src = hashlib.md5()
+            h_dst = hashlib.md5()
 
         while True:
             chunk_src = src.read(4096)
