@@ -7,7 +7,7 @@ git clone https://github.com/cs-afm/co-dot-py
 
 ## Usage
 
-#### [python/python3] co.py -s SRC -d DST [-x]
+#### [python/python3] co.py [OPTIONS] -s SRC -d DST
 
 option | value
 ------------ | -------------
