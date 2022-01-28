@@ -5,7 +5,7 @@ import xxhash
 import json
 from datetime import datetime
 
-version = '0.1.3'
+version = '0.1.4'
 
 parser = argparse.ArgumentParser(
     prog='co-dot-py',
@@ -17,13 +17,13 @@ parser.add_argument(
     '-s',
     metavar='path/to/source',
     type=str,
-    help='Source path'
+    help='Source path (file or directory)'
     )
 parser.add_argument(
     '-d',
     metavar='path/to/destination',
     type=str,
-    help='Destination path'
+    help='Destination path (directory)'
     )
 parser.add_argument(
     '-x',
@@ -119,17 +119,20 @@ def copy_file(src_path, dst_path, xxHash_switch, buffersize, caller='myself'):
         if caller == 'myself':
             print(' ' * 200, end="\r", flush=True)
             print('Copying: done!')
-            print(f'Source path: {src_path}')
-            print(f'Source hash ({hash_type}): {hash_src}')
-            print(f'Destination path: {dst_path}')
-            print(f'Destination hash ({hash_type}): {hash_dst}')
+            print(f'Source path: "{src_path}"')
+            print(f'Source hash ({hash_type}): "{hash_src}"')
+            print(f'Destination path: "{dst_path}"')
+            print(f'Destination hash ({hash_type}): "{hash_dst}"')
+            print(f'Filesize: {adjust_filesize(filesize)}')
             print(f'Average speed: {get_transfer_speed(filesize, start_time)}/s')
-            print(f'Total time: {datetime.now() - start_time}')
+            print(f'Total transfer time: {datetime.now() - start_time}')
         
         hash_tuple = (src_path, hash_dst)
-        return hash_tuple, dst_path
+        return hash_tuple, dst_path, filesize
 
 def copy_dir(src_path, dst_path, xxHash_switch, buffersize):
+    start_time = datetime.now()
+    print('--------------------------------------------')
     dst_path = os.path.join(dst_path, os.path.basename(src_path))
     while os.path.exists(dst_path):
         dst_path = os.path.join(
@@ -139,13 +142,16 @@ def copy_dir(src_path, dst_path, xxHash_switch, buffersize):
     os.mkdir(dst_path)
 
     hash_list = []
+    total_files_transferred = 0
+    total_size = 0
     for root, dirs, files in os.walk(src_path):
         clean_root = root.replace(src_path, '')
         clean_root = clean_root[1:] if clean_root.startswith(os.path.sep) else clean_root
         for dir in dirs:
             os.mkdir(os.path.join(dst_path, clean_root, dir))
+        
         for filename in files:
-            hash_tuple = copy_file(
+            hash_tuple, _, filesize = copy_file(
                 os.path.join(root, filename),
                 os.path.join(dst_path, clean_root, filename),
                 xxHash_switch,
@@ -153,8 +159,19 @@ def copy_dir(src_path, dst_path, xxHash_switch, buffersize):
                 'copy_dir'
             )
             hash_list.append(hash_tuple[0])
-    
-    return hash_list, dst_path
+            total_files_transferred += 1
+            total_size += filesize
+
+    print(' ' * 200, end="\r", flush=True)
+    print('Copying: done!')
+    print(f'Source path: "{src_path}"')
+    print(f'Destination path: "{dst_path}"')
+    print(f'Total size: {adjust_filesize(total_size)} ({total_files_transferred} files)')
+    print(f'Average speed: {get_transfer_speed(total_size, start_time)}/s')
+    print(f'Total transfer time: {datetime.now() - start_time}')
+    print('............................................')
+
+    return hash_list, dst_path, total_size
 
 def dump_manifest(hash_list, xxHash_switch, version, dst, parent=False):
     hash_type = 'xxHash' if xxHash_switch else 'md5'
@@ -180,29 +197,23 @@ def dump_manifest(hash_list, xxHash_switch, version, dst, parent=False):
 def co_py(args, src):
     if os.path.isfile(src):
         print('--------------------------------------------')
-        hash_tuple, manifest_dst = copy_file(src, args.d, args.x, buffersize)
+        hash_tuple, manifest_dst, _ = copy_file(src, args.d, args.x, buffersize)
         if args.m:
             dump_manifest([hash_tuple], args.x, version, manifest_dst)
         print('............................................')
 
     elif os.path.isdir(src):
-        start_time = datetime.now()
-        print('--------------------------------------------')
-        hash_list, manifest_dst = copy_dir(src, args.d, args.x, buffersize)
+        
+        hash_list, manifest_dst, total_size = copy_dir(src, args.d, args.x, buffersize)
         if args.m:
             dump_manifest(hash_list, args.x, version, manifest_dst, src)
-        print(' ' * 200, end="\r", flush=True)
-        print('Copying: done!')
-        print(f'Source path: {src}')
-        print(f'Destination path: {args.d}')
-        print(f'Total transfer time: {datetime.now() - start_time}')
-        print('............................................')
+        
 ### ### ### ###
 if __name__ == "__main__":
     args = parser.parse_args()
     buffersize = (64 * 1024**2) if args.hib else (16 * 1024)
 
-    if os.path.exists(args.s):
+    if os.path.exists(args.s) and os.path.isdir(args.d):
         if args.r and os.path.isdir(args.s):
             root, dirs, files = next(os.walk(args.s))
             candidates = dirs + files
@@ -210,10 +221,10 @@ if __name__ == "__main__":
             for candidate in candidates:
                 co_py(args, os.path.join(args.s, candidate))
 
-        elif args.r:
-            print('ciao')
+        elif args.r: print('If you use the option -r the source path must be a folder, silly!')
         
-        else:
-            co_py(args, args.s)
+        else: co_py(args, args.s)
+
+    else: print("Something's wrong with your source and/or destination path")
 
     
