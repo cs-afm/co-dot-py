@@ -8,13 +8,13 @@ A little cli tool for moving things around.
 ## Usage
 ```[python/python3] co.py [OPTIONS] -s $SOURCE -d $DESTINATION```
 ### Options
-option | value
------------- | -------------
--s| required: path/to/source
--d | required: path/to/destination. If the destination path exists it will prepend "co.py_" to the copy
--x | optional: switch for xxHash instead of md5
--m | optional: stores the hashcodes in a sidecar .json file
--r | optional: copies all the files/folders in the source path
--hib | optional: uses a higher buffer size (64 MiB)
+option | value | required
+------------ | ------------- | -------------
+-s| path/to/source (can be a file or a directory) | yes
+-d | path/to/destination (must be a directory). In case of filename clash co.py will prepend the label "co.py_" to the copy | yes
+-x | switch for xxHash instead of md5 | no
+-m | stores the hashcodes in a sidecar .json file | no
+-r | copies all the files/folders in the source path (if used, the source path must be a directory) | no
+-hib | uses a higher buffer size (64 MiB instead of the default 16 Kib) | no
 ## License
 There ain't any. Do with this code whatever you want.
