@@ -202,14 +202,18 @@ if __name__ == "__main__":
     args = parser.parse_args()
     buffersize = (64 * 1024**2) if args.hib else (16 * 1024)
 
-    if args.r:
-        root, dirs, files = next(os.walk(args.s))
-        candidates = dirs + files
+    if os.path.exists(args.s):
+        if args.r and os.path.isdir(args.s):
+            root, dirs, files = next(os.walk(args.s))
+            candidates = dirs + files
 
-        for candidate in candidates:
-            co_py(args, os.path.join(args.s, candidate))
-    
-    else:
-        co_py(args, args.s)
+            for candidate in candidates:
+                co_py(args, os.path.join(args.s, candidate))
+
+        elif args.r:
+            print('ciao')
+        
+        else:
+            co_py(args, args.s)
 
     
