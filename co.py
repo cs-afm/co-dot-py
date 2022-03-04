@@ -158,7 +158,7 @@ def copy_dir(src_path, dst_path, xxHash_switch, buffersize):
                 buffersize,
                 'copy_dir'
             )
-            hash_list.append(hash_tuple[0])
+            hash_list.append(hash_tuple)
             total_files_transferred += 1
             total_size += filesize
 
@@ -204,7 +204,7 @@ def co_py(args, src):
 
     elif os.path.isdir(src):
         
-        hash_list, manifest_dst, total_size = copy_dir(src, args.d, args.x, buffersize)
+        hash_list, manifest_dst, _ = copy_dir(src, args.d, args.x, buffersize)
         if args.m:
             dump_manifest(hash_list, args.x, version, manifest_dst, src)
         
