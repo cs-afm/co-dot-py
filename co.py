@@ -1,17 +1,19 @@
+import csv
 import os
 import argparse
 import hashlib
+from pathlib import Path
 import xxhash
 import json
 from datetime import datetime
 
-version = '0.1.4'
+VERSION = '0.2.0'
 
 parser = argparse.ArgumentParser(
     prog='co-dot-py',
     description='A little cli tool for moving things around'
     )
-parser.version = version
+parser.version = VERSION
 
 parser.add_argument(
     '-s',
@@ -44,6 +46,11 @@ parser.add_argument(
     '-hib',
     action='store_true',
     help='High buffer size')
+
+parser.add_argument(
+    '-l',
+    action='store_true',
+    help='Legacy manifest format (.json)')
 ### ### ### ###
 def adjust_filesize(size):
     for unit in ['B','KiB','MiB','GiB','TiB','PiB','EiB','ZiB']:
@@ -78,7 +85,7 @@ def copy_file(src_path, dst_path, xxHash_switch, buffersize, caller='myself'):
         transferred_size = 0
         progress_print = 0
 
-        hash_func, hash_type = [xxhash.xxh64, 'xxHash'] if xxHash_switch else [hashlib.md5, 'md5']
+        hash_func, hash_type = [xxhash.xxh3_128, 'xxHash-128'] if xxHash_switch else [hashlib.md5, 'md5']
         hash_src = hash_func()
         hash_dst = hash_func()
 
@@ -127,7 +134,7 @@ def copy_file(src_path, dst_path, xxHash_switch, buffersize, caller='myself'):
             print(f'Average speed: {get_transfer_speed(filesize, start_time)}/s')
             print(f'Total transfer time: {datetime.now() - start_time}')
         
-        hash_tuple = (src_path, hash_dst)
+        hash_tuple = (src_path, hash_dst, filesize)
         return hash_tuple, dst_path, filesize
 
 def copy_dir(src_path, dst_path, xxHash_switch, buffersize):
@@ -173,40 +180,77 @@ def copy_dir(src_path, dst_path, xxHash_switch, buffersize):
 
     return hash_list, dst_path, total_size
 
-def dump_manifest(hash_list, xxHash_switch, version, dst, parent=False):
-    hash_type = 'xxHash' if xxHash_switch else 'md5'
+def dump_manifest(hash_list, xxHash_switch, dst, parent=False, legacy_format=False):
+    if legacy_format:
+        hash_type = 'xxHash-128' if xxHash_switch else 'md5'
 
-    manifest = {
-        '_DATETIME': datetime.now().strftime('%Y-%m-%d.%H:%M'),
-        '_HASH_TYPE': hash_type,
-        '_VERSION': f'co-dot-py - {version}',
-        '_HASHCODES': {}
-    }
+        manifest = {
+            '_DATETIME': datetime.now().strftime('%Y-%m-%d.%H:%M'),
+            '_HASH_TYPE': hash_type,
+            '_HASHCODES': {}
+        }
 
-    for hash in hash_list:
-        key = hash[0].split(parent)[-1] if parent else os.path.basename(hash[0])
-        manifest['_HASHCODES'][key] = hash[1]
+        for hash in hash_list:
+            key = hash[0].split(parent)[-1] if parent else os.path.basename(hash[0])
+            manifest['_HASHCODES'][key] = hash[1]
 
-    if parent:
-        manifest['_LENGTH'] = len(hash_list)
-        manifest['_PARENT_FOLDER'] = os.path.basename(parent)
+        if parent:
+            manifest['_LENGTH'] = len(hash_list)
+            manifest['_PARENT_FOLDER'] = os.path.basename(parent)
 
-    with open(f'{dst}_{hash_type}.json', 'w') as json_manifest:
-        json_manifest.write(json.dumps(manifest, indent=4))
+        with open(f'{dst}_{hash_type}.json', 'w') as json_manifest:
+            json_manifest.write(json.dumps(manifest, indent=4))
+    
+    else:
+        with open(f'{dst}__HASHCODES.csv', 'w', newline='', encoding='utf-8') as csv_manifest:
+            manifest = csv.writer(csv_manifest)
+            manifest.writerow(['Filename', 'Size (bytes)', 'xxHash-128', 'md5'])
+
+            if len(hash_list) > 1:
+                for f in hash_list:
+                    path = Path(f[0])
+                    normalized_path = str(path.relative_to(path.parents[1])).replace("\\", "/")
+                    manifest.writerow([
+                        f'{normalized_path}',
+                        f'{f[2]}',
+                        f'{f[1]}' if xxHash_switch else '',
+                        f'{f[1]}' if not xxHash_switch else ''
+                    ])
+            else:
+                path = Path(hash_list[0][0])
+                manifest.writerow([
+                    f'{path.name}',
+                    f'{hash_list[0][2]}',
+                    f'{hash_list[0][1]}' if xxHash_switch else '',
+                    f'{hash_list[0][1]}' if not xxHash_switch else ''
+                ])
+
+            manifest.writerow([
+                f'#CREATOR::co.py-{VERSION}',
+                '', '', ''
+            ])
+            manifest.writerow([
+                f'#LENGTH::{len(hash_list)}',
+                '', '', ''
+            ])
+            manifest.writerow([
+                f'#DATETIME::{datetime.now().strftime("%Y-%m-%d.%H:%M")}',
+                '', '', ''
+            ])
 ### ### ### ###
 def co_py(args, src):
     if os.path.isfile(src):
         print('--------------------------------------------')
         hash_tuple, manifest_dst, _ = copy_file(src, args.d, args.x, buffersize)
         if args.m:
-            dump_manifest([hash_tuple], args.x, version, manifest_dst)
+            dump_manifest([hash_tuple], args.x, manifest_dst, legacy_format=args.l)
         print('............................................')
 
     elif os.path.isdir(src):
         
         hash_list, manifest_dst, _ = copy_dir(src, args.d, args.x, buffersize)
         if args.m:
-            dump_manifest(hash_list, args.x, version, manifest_dst, src)
+            dump_manifest(hash_list, args.x, manifest_dst, src, legacy_format=args.l)
         
 ### ### ### ###
 if __name__ == "__main__":
