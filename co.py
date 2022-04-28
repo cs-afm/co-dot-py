@@ -7,7 +7,7 @@ import xxhash
 import json
 from datetime import datetime
 
-VERSION = '0.2.0'
+VERSION = '0.2.1'
 
 parser = argparse.ArgumentParser(
     prog='co-dot-py',
@@ -181,8 +181,9 @@ def copy_dir(src_path, dst_path, xxHash_switch, buffersize):
     return hash_list, dst_path, total_size
 
 def dump_manifest(hash_list, xxHash_switch, dst, parent=False, legacy_format=False):
+    hash_list.sort()
+    hash_type = 'xxHash-128' if xxHash_switch else 'md5'
     if legacy_format:
-        hash_type = 'xxHash-128' if xxHash_switch else 'md5'
 
         manifest = {
             '_DATETIME': datetime.now().strftime('%Y-%m-%d.%H:%M'),
@@ -202,9 +203,9 @@ def dump_manifest(hash_list, xxHash_switch, dst, parent=False, legacy_format=Fal
             json_manifest.write(json.dumps(manifest, indent=4))
     
     else:
-        with open(f'{dst}__HASHCODES.csv', 'w', newline='', encoding='utf-8') as csv_manifest:
+        with open(f'{dst}__{hash_type}.csv', 'w', newline='', encoding='utf-8') as csv_manifest:
             manifest = csv.writer(csv_manifest)
-            manifest.writerow(['Filename', 'Size (bytes)', 'xxHash-128', 'md5'])
+            manifest.writerow(['Filename', 'Size (bytes)', 'md5', 'xxHash-128'])
 
             if len(hash_list) > 1:
                 for f in hash_list:
@@ -213,16 +214,16 @@ def dump_manifest(hash_list, xxHash_switch, dst, parent=False, legacy_format=Fal
                     manifest.writerow([
                         f'{normalized_path}',
                         f'{f[2]}',
-                        f'{f[1]}' if xxHash_switch else '',
-                        f'{f[1]}' if not xxHash_switch else ''
+                        f'{f[1]}' if not xxHash_switch else '',
+                        f'{f[1]}' if xxHash_switch else ''
                     ])
             else:
                 path = Path(hash_list[0][0])
                 manifest.writerow([
                     f'{path.name}',
                     f'{hash_list[0][2]}',
-                    f'{hash_list[0][1]}' if xxHash_switch else '',
-                    f'{hash_list[0][1]}' if not xxHash_switch else ''
+                    f'{hash_list[0][1]}' if not xxHash_switch else '',
+                    f'{hash_list[0][1]}' if xxHash_switch else ''
                 ])
 
             manifest.writerow([
