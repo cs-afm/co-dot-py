@@ -7,7 +7,7 @@ import xxhash
 import json
 from datetime import datetime
 
-VERSION = '0.2.1'
+VERSION = '0.2.2'
 
 parser = argparse.ArgumentParser(
     prog='co-dot-py',
@@ -203,7 +203,7 @@ def dump_manifest(hash_list, xxHash_switch, dst, parent=False, legacy_format=Fal
             json_manifest.write(json.dumps(manifest, indent=4))
     
     else:
-        with open(f'{dst}__{hash_type}.csv', 'w', newline='', encoding='utf-8') as csv_manifest:
+        with open(f'{dst}__HASHCODES.csv', 'w', newline='', encoding='utf-8') as csv_manifest:
             manifest = csv.writer(csv_manifest)
             manifest.writerow(['Filename', 'Size (bytes)', 'md5', 'xxHash-128'])
 
