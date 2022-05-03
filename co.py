@@ -7,7 +7,7 @@ import xxhash
 import json
 from datetime import datetime
 
-VERSION = '0.2.2'
+VERSION = '0.2.3'
 
 parser = argparse.ArgumentParser(
     prog='co-dot-py',
@@ -133,7 +133,7 @@ def copy_file(src_path, dst_path, xxHash_switch, buffersize, caller='myself'):
             print(f'Filesize: {adjust_filesize(filesize)}')
             print(f'Average speed: {get_transfer_speed(filesize, start_time)}/s')
             print(f'Total transfer time: {datetime.now() - start_time}')
-        
+
         hash_tuple = (src_path, hash_dst, filesize)
         return hash_tuple, dst_path, filesize
 
@@ -152,7 +152,7 @@ def copy_dir(src_path, dst_path, xxHash_switch, buffersize):
     total_files_transferred = 0
     total_size = 0
     for root, dirs, files in os.walk(src_path):
-        clean_root = root.replace(src_path, '')
+        clean_root = os.path.relpath(root, src_path)
         clean_root = clean_root[1:] if clean_root.startswith(os.path.sep) else clean_root
         for dir in dirs:
             os.mkdir(os.path.join(dst_path, clean_root, dir))
@@ -192,7 +192,8 @@ def dump_manifest(hash_list, xxHash_switch, dst, parent=False, legacy_format=Fal
         }
 
         for hash in hash_list:
-            key = hash[0].split(parent)[-1] if parent else os.path.basename(hash[0])
+            # key = hash[0].split(parent)[-1] if parent else os.path.basename(hash[0])
+            key = os.path.relpath(hash[0], parent) if parent else os.path.basename(hash[0])
             manifest['_HASHCODES'][key] = hash[1]
 
         if parent:
@@ -207,12 +208,11 @@ def dump_manifest(hash_list, xxHash_switch, dst, parent=False, legacy_format=Fal
             manifest = csv.writer(csv_manifest)
             manifest.writerow(['Filename', 'Size (bytes)', 'md5', 'xxHash-128'])
 
-            if len(hash_list) > 1:
+            if parent:
                 for f in hash_list:
                     path = Path(f[0])
-                    normalized_path = str(path.relative_to(path.parents[1])).replace("\\", "/")
                     manifest.writerow([
-                        f'{normalized_path}',
+                        f'{path}',
                         f'{f[2]}',
                         f'{f[1]}' if not xxHash_switch else '',
                         f'{f[1]}' if xxHash_switch else ''
