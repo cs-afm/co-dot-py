@@ -211,7 +211,7 @@ def dump_manifest(hash_list, xxHash_switch, dst, parent=False, legacy_format=Fal
                 for f in hash_list:
                     path = Path(f[0]).relative_to(Path(parent).parent)
                     manifest.writerow([
-                        f'{path}',
+                        f'{path}'.replace('\\', '/'),
                         f'{f[2]}',
                         f'{f[1]}' if not xxHash_switch else '',
                         f'{f[1]}' if xxHash_switch else ''
