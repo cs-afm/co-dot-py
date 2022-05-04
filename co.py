@@ -7,7 +7,7 @@ import xxhash
 import json
 from datetime import datetime
 
-VERSION = '0.2.3'
+VERSION = '0.2.4'
 
 parser = argparse.ArgumentParser(
     prog='co-dot-py',
@@ -192,8 +192,7 @@ def dump_manifest(hash_list, xxHash_switch, dst, parent=False, legacy_format=Fal
         }
 
         for hash in hash_list:
-            # key = hash[0].split(parent)[-1] if parent else os.path.basename(hash[0])
-            key = os.path.relpath(hash[0], parent) if parent else os.path.basename(hash[0])
+            key = hash[0].split(parent)[-1] if parent else os.path.basename(hash[0])
             manifest['_HASHCODES'][key] = hash[1]
 
         if parent:
@@ -210,7 +209,7 @@ def dump_manifest(hash_list, xxHash_switch, dst, parent=False, legacy_format=Fal
 
             if parent:
                 for f in hash_list:
-                    path = Path(f[0])
+                    path = Path(f[0]).relative_to(Path(parent).parent)
                     manifest.writerow([
                         f'{path}',
                         f'{f[2]}',
