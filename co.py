@@ -7,7 +7,7 @@ import xxhash
 import json
 from datetime import datetime
 
-VERSION = '0.2.4'
+VERSION = '0.2.5'
 
 parser = argparse.ArgumentParser(
     prog='co-dot-py',
@@ -205,6 +205,19 @@ def dump_manifest(hash_list, xxHash_switch, dst, parent=False, legacy_format=Fal
     else:
         with open(f'{dst}__HASHCODES.csv', 'w', newline='', encoding='utf-8') as csv_manifest:
             manifest = csv.writer(csv_manifest)
+            
+            manifest.writerow([
+                f'#CREATOR::co.py-{VERSION}',
+                '', '', ''
+            ])
+            manifest.writerow([
+                f'#LENGTH::{len(hash_list)}',
+                '', '', ''
+            ])
+            manifest.writerow([
+                f'#DATETIME::{datetime.now().strftime("%Y-%m-%d.%H:%M")}',
+                '', '', ''
+            ])
             manifest.writerow(['Filename', 'Size (bytes)', 'md5', 'xxHash-128'])
 
             if parent:
@@ -225,18 +238,6 @@ def dump_manifest(hash_list, xxHash_switch, dst, parent=False, legacy_format=Fal
                     f'{hash_list[0][1]}' if xxHash_switch else ''
                 ])
 
-            manifest.writerow([
-                f'#CREATOR::co.py-{VERSION}',
-                '', '', ''
-            ])
-            manifest.writerow([
-                f'#LENGTH::{len(hash_list)}',
-                '', '', ''
-            ])
-            manifest.writerow([
-                f'#DATETIME::{datetime.now().strftime("%Y-%m-%d.%H:%M")}',
-                '', '', ''
-            ])
 ### ### ### ###
 def co_py(args, src):
     if os.path.isfile(src):
