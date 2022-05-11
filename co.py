@@ -7,7 +7,7 @@ import xxhash
 import json
 from datetime import datetime
 
-VERSION = '0.2.5'
+VERSION = '0.2.6'
 
 parser = argparse.ArgumentParser(
     prog='co-dot-py',
@@ -157,7 +157,7 @@ def copy_dir(src_path, dst_path, xxHash_switch, buffersize):
         for dir in dirs:
             os.mkdir(os.path.join(dst_path, clean_root, dir))
         
-        for filename in files:
+        for filename in [f for f in files if f != '.DS_Store']:
             hash_tuple, _, filesize = copy_file(
                 os.path.join(root, filename),
                 os.path.join(dst_path, clean_root, filename),
